@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KAM — King Appointment Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0b0f1a;
+  --surface:#141927;
+  --surface2:#1c2333;
+  --surface3:#232d40;
+  --border:#2a3550;
+  --border2:#334066;
+  --text:#e8edf8;
+  --text2:#8b9bbf;
+  --text3:#5a6b8a;
+  --gold:#f5c842;
+  --gold-dim:rgba(245,200,66,0.12);
+  --gold-border:rgba(245,200,66,0.3);
+  --blue:#3b82f6;
+  --blue-dim:rgba(59,130,246,0.12);
+  --green:#10b981;
+  --green-dim:rgba(16,185,129,0.12);
+  --red:#ef4444;
+  --red-dim:rgba(239,68,68,0.12);
+  --orange:#f59e0b;
+  --orange-dim:rgba(245,158,11,0.12);
+  --purple:#a78bfa;
+  --purple-dim:rgba(167,139,250,0.12);
+  --radius:10px;
+  --radius-sm:6px;
+}
+html{scroll-behavior:smooth;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5;}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:var(--surface);}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+
+/* ── LAYOUT ── */
+.app{display:grid;grid-template-rows:auto 1fr;min-height:100vh;}
+
+/* ── TOPBAR ── */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;gap:12px;height:56px;position:sticky;top:0;z-index:200;}
+.topbar-logo{display:flex;align-items:center;gap:10px;margin-right:auto;}
+.logo-crown{font-size:20px;}
+.logo-text{font-weight:700;font-size:15px;letter-spacing:-0.01em;}
+.logo-text span{color:var(--gold);}
+.logo-sub{font-size:10px;color:var(--text3);font-weight:500;letter-spacing:0.08em;text-transform:uppercase;}
+.tab-bar{display:flex;gap:2px;}
+.tab-btn{padding:6px 14px;border-radius:var(--radius-sm);font-size:12px;font-weight:600;color:var(--text2);background:none;border:none;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s;white-space:nowrap;}
+.tab-btn:hover{color:var(--text);background:var(--surface2);}
+.tab-btn.active{color:var(--gold);background:var(--gold-dim);}
+.topbar-actions{display:flex;gap:8px;margin-left:8px;}
+
+/* ── MAIN ── */
+.main{padding:20px;max-width:1400px;margin:0 auto;width:100%;}
+
+/* ── VIEWS ── */
+.view{display:none;}
+.view.active{display:block;}
+
+/* ── SECTION HEADER ── */
+.sec-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
+.sec-title{font-size:16px;font-weight:700;color:var(--text);}
+.sec-sub{font-size:12px;color:var(--text3);}
+.sec-actions{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--radius-sm);font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:'Inter',sans-serif;transition:all .15s;white-space:nowrap;}
+.btn-primary{background:var(--gold);color:#111;}
+.btn-primary:hover{background:#f0c020;}
+.btn-secondary{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+.btn-secondary:hover{color:var(--text);border-color:var(--border2);}
+.btn-danger{background:var(--red-dim);color:var(--red);border:1px solid rgba(239,68,68,0.25);}
+.btn-danger:hover{background:rgba(239,68,68,0.2);}
+.btn-green{background:var(--green-dim);color:var(--green);border:1px solid rgba(16,185,129,0.25);}
+.btn-green:hover{background:rgba(16,185,129,0.2);}
+.btn-blue{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(59,130,246,0.25);}
+.btn-blue:hover{background:rgba(59,130,246,0.2);}
+.btn-sm{padding:5px 10px;font-size:11px;}
+.btn-icon{padding:6px;width:30px;height:30px;justify-content:center;}
+
+/* ── STATS ROW ── */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:20px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;}
+.stat-val{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:600;color:var(--gold);line-height:1;}
+.stat-label{font-size:11px;color:var(--text3);margin-top:4px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;}
+
+/* ── SORT BAR ── */
+.sort-bar{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;align-items:center;}
+.sort-label{font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin-right:4px;}
+.sort-chip{padding:4px 10px;border-radius:99px;font-size:11px;font-weight:600;background:var(--surface2);border:1px solid var(--border);color:var(--text2);cursor:pointer;transition:all .15s;}
+.sort-chip:hover{color:var(--text);}
+.sort-chip.active{background:var(--gold-dim);border-color:var(--gold-border);color:var(--gold);}
+
+/* ── TABLE ── */
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;overflow-x:auto;}
+table{width:100%;border-collapse:collapse;min-width:700px;}
+thead{background:var(--surface2);}
+th{padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle;font-size:13px;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--surface2);}
+.td-name{font-weight:600;color:var(--text);}
+.td-mono{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--gold);}
+.td-time{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--blue);}
+.td-score{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--green);}
+.td-alliance{font-size:12px;color:var(--purple);}
+.td-actions{display:flex;gap:4px;}
+.empty-state{padding:48px 20px;text-align:center;color:var(--text3);}
+.empty-state-icon{font-size:32px;margin-bottom:10px;}
+.empty-state-title{font-size:14px;font-weight:600;color:var(--text2);margin-bottom:4px;}
+.empty-state-desc{font-size:12px;}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .2s;}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;width:100%;max-width:500px;box-shadow:0 24px 80px rgba(0,0,0,0.5);transform:translateY(12px);transition:transform .2s;}
+.modal-overlay.open .modal{transform:translateY(0);}
+.modal-header{padding:20px 24px 0;display:flex;justify-content:space-between;align-items:center;}
+.modal-title{font-size:15px;font-weight:700;}
+.modal-close{background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;padding:4px;border-radius:4px;line-height:1;}
+.modal-close:hover{color:var(--text);}
+.modal-body{padding:20px 24px;}
+.modal-footer{padding:0 24px 20px;display:flex;gap:8px;justify-content:flex-end;}
+
+/* ── FORM ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.form-group{display:flex;flex-direction:column;gap:4px;}
+.form-group.full{grid-column:1/-1;}
+label{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.06em;}
+input,select,textarea{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;padding:9px 11px;width:100%;transition:border-color .15s;}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);}
+input::placeholder,textarea::placeholder{color:var(--text3);}
+select option{background:var(--surface2);}
+textarea{resize:vertical;min-height:60px;}
+
+/* ── SCHEDULE TABLE ── */
+.schedule-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;overflow-x:auto;margin-bottom:20px;}
+.schedule-table{width:100%;border-collapse:collapse;min-width:500px;}
+.schedule-table thead{background:linear-gradient(90deg,var(--gold-dim),transparent);}
+.schedule-table th{padding:10px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.08em;border-bottom:1px solid var(--gold-border);}
+.schedule-table td{padding:11px 14px;border-bottom:1px solid var(--border);font-size:13px;}
+.schedule-table tr:last-child td{border-bottom:none;}
+.schedule-table tr:hover td{background:var(--surface2);}
+.sched-time{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--gold);font-size:13px;}
+.sched-name{font-weight:600;color:var(--text);}
+.sched-alliance{color:var(--purple);font-size:12px;}
+.sched-score{font-family:'JetBrains Mono',monospace;color:var(--green);font-size:12px;font-weight:600;}
+.sched-row-king{background:rgba(245,200,66,0.04);}
+
+/* ── WAITLIST ── */
+.waitlist-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;overflow-x:auto;}
+.wl-header{padding:12px 16px;background:var(--orange-dim);border-bottom:1px solid rgba(245,158,11,0.2);display:flex;align-items:center;gap:8px;}
+.wl-title{font-size:13px;font-weight:700;color:var(--orange);}
+.wl-table{width:100%;border-collapse:collapse;min-width:400px;}
+.wl-table th{padding:9px 14px;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid var(--border);}
+.wl-table td{padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;}
+.wl-table tr:last-child td{border-bottom:none;}
+.wl-rank{font-family:'JetBrains Mono',monospace;color:var(--orange);font-weight:700;}
+
+/* ── CONFLICT BADGE ── */
+.conflict-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;background:var(--red-dim);color:var(--red);border:1px solid rgba(239,68,68,0.2);}
+.assigned-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;background:var(--green-dim);color:var(--green);border:1px solid rgba(16,185,129,0.2);}
+.waitlist-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;background:var(--orange-dim);color:var(--orange);border:1px solid rgba(245,158,11,0.2);}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:12px 18px;font-size:13px;font-weight:500;color:var(--text);box-shadow:0 8px 32px rgba(0,0,0,0.4);z-index:2000;transform:translateY(12px);opacity:0;transition:all .25s;pointer-events:none;max-width:300px;}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.success{border-color:rgba(16,185,129,0.4);color:var(--green);}
+.toast.error{border-color:rgba(239,68,68,0.4);color:var(--red);}
+
+/* ── GENERATE PANEL ── */
+.gen-banner{background:linear-gradient(135deg,var(--gold-dim),rgba(245,200,66,0.05));border:1px solid var(--gold-border);border-radius:var(--radius);padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+.gen-banner-text h3{font-size:15px;font-weight:700;color:var(--gold);margin-bottom:3px;}
+.gen-banner-text p{font-size:12px;color:var(--text2);}
+.gen-banner-actions{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;}
+
+/* ── RESPONSIVE ── */
+@media(max-width:640px){
+  .topbar{padding:0 12px;flex-wrap:wrap;height:auto;padding-top:10px;padding-bottom:10px;gap:8px;}
+  .tab-bar{order:3;width:100%;overflow-x:auto;}
+  .tab-btn{padding:5px 10px;font-size:11px;}
+  .topbar-actions{margin-left:0;}
+  .main{padding:12px;}
+  .stats-row{grid-template-columns:repeat(2,1fr);}
+  .form-grid{grid-template-columns:1fr;}
+  .sec-actions{margin-left:0;width:100%;}
+  .sec-header{gap:8px;}
+  .gen-banner{flex-direction:column;}
+  .gen-banner-actions{margin-left:0;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-logo">
+    <div class="logo-crown">👑</div>
+    <div>
+      <div class="logo-text">KAM <span>Dashboard</span></div>
+      <div class="logo-sub">King Appointment Manager</div>
+    </div>
+  </div>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('dashboard',this)">📋 Requests</button>
+    <button class="tab-btn" onclick="switchTab('schedule',this)">📅 Schedule</button>
+    <button class="tab-btn" onclick="switchTab('waitlist',this)">⏳ Wait List</button>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn btn-primary" onclick="openModal()">+ Add Player</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- ══ DASHBOARD TAB ══ -->
+  <div id="tab-dashboard" class="view active">
+    <div class="stats-row" id="statsRow"></div>
+    <div class="sec-header">
+      <div>
+        <div class="sec-title">Appointment Requests</div>
+        <div class="sec-sub">Manually entered by MOJ from R4/R5 messages</div>
+      </div>
+      <div class="sec-actions">
+        <div class="sort-bar" style="margin:0;">
+          <span class="sort-label">Sort</span>
+          <span class="sort-chip active" data-sort="name" onclick="setSort('name',this)">Name</span>
+          <span class="sort-chip" data-sort="alliance" onclick="setSort('alliance',this)">Alliance</span>
+          <span class="sort-chip" data-sort="score" onclick="setSort('score',this)">Score</span>
+          <span class="sort-chip" data-sort="tg" onclick="setSort('tg',this)">TG</span>
+          <span class="sort-chip" data-sort="ttg" onclick="setSort('ttg',this)">TTG</span>
+          <span class="sort-chip" data-sort="time" onclick="setSort('time',this)">Time</span>
+        </div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="playerTable">
+        <thead>
+          <tr>
+            <th>Player</th>
+            <th>Alliance</th>
+            <th>TG</th>
+            <th>TTG</th>
+            <th>Score</th>
+            <th>Pref. Time (UTC)</th>
+            <th>2nd Time</th>
+            <th>Status</th>
+            <th>Notes</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="playerBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══ SCHEDULE TAB ══ -->
+  <div id="tab-schedule" class="view">
+    <div class="gen-banner">
+      <div style="font-size:28px;">👑</div>
+      <div class="gen-banner-text">
+        <h3>Generate Appointment Schedule</h3>
+        <p>Assigns players to 30-min slots by Priority Score. Conflicts resolved automatically.</p>
+      </div>
+      <div class="gen-banner-actions">
+        <button class="btn btn-primary" onclick="generateSchedule()">⚡ Generate Schedule</button>
+        <button class="btn btn-green" onclick="exportExcel()">📊 Export Excel</button>
+        <button class="btn btn-secondary" onclick="exportCSV()">📄 Export CSV</button>
+      </div>
+    </div>
+    <div id="scheduleOutput">
+      <div class="empty-state">
+        <div class="empty-state-icon">📅</div>
+        <div class="empty-state-title">No schedule generated yet</div>
+        <div class="empty-state-desc">Click "Generate Schedule" to auto-assign all appointment slots.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ WAITLIST TAB ══ -->
+  <div id="tab-waitlist" class="view">
+    <div class="sec-header">
+      <div>
+        <div class="sec-title">Wait List</div>
+        <div class="sec-sub">Players who couldn't be assigned a slot — ordered by Priority Score</div>
+      </div>
+    </div>
+    <div id="waitlistOutput">
+      <div class="empty-state">
+        <div class="empty-state-icon">⏳</div>
+        <div class="empty-state-title">Wait list is empty</div>
+        <div class="empty-state-desc">Generate a schedule first. Players who can't be placed appear here.</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOnBg(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Add Player</div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>In-Game Name *</label>
+          <input type="text" id="f-name" placeholder="e.g. Thunder Alley" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label>Alliance *</label>
+          <input type="text" id="f-alliance" placeholder="e.g. EON" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label>TG *</label>
+          <input type="number" id="f-tg" placeholder="e.g. 1500" min="0">
+        </div>
+        <div class="form-group">
+          <label>TTG *</label>
+          <input type="number" id="f-ttg" placeholder="e.g. 2000" min="0">
+        </div>
+        <div class="form-group">
+          <label>Preferred Time (UTC) *</label>
+          <input type="time" id="f-pref" step="1800">
+        </div>
+        <div class="form-group">
+          <label>Secondary Time (optional)</label>
+          <input type="time" id="f-sec" step="1800">
+        </div>
+        <div class="form-group full">
+          <label>Notes (optional)</label>
+          <textarea id="f-notes" placeholder="Any relevant notes..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="savePlayer()">Save Player</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── STATE ── */
+let players = JSON.parse(localStorage.getItem('kam_players') || '[]');
+let editId = null;
+let sortKey = 'name';
+let scheduleData = [];
+let waitlistData = [];
+
+/* ── UTILS ── */
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+function save(){ localStorage.setItem('kam_players', JSON.stringify(players)); }
+function score(p){ return (parseInt(p.tg)||0) + (parseInt(p.ttg)||0); }
+function fmtTime(t){ if(!t) return '—'; const [h,m]=t.split(':'); return `${h}:${m} UTC`; }
+function showToast(msg, type='success'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show '+(type||'');
+  setTimeout(()=>t.className='toast',2500);
+}
+
+/* ── TABS ── */
+function switchTab(name, btn){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+}
+
+/* ── SORT ── */
+function setSort(key, el){
+  sortKey=key;
+  document.querySelectorAll('.sort-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  renderTable();
+}
+function getSorted(){
+  return [...players].sort((a,b)=>{
+    if(sortKey==='score') return score(b)-score(a);
+    if(sortKey==='tg') return (parseInt(b.tg)||0)-(parseInt(a.tg)||0);
+    if(sortKey==='ttg') return (parseInt(b.ttg)||0)-(parseInt(a.ttg)||0);
+    if(sortKey==='time') return (a.pref||'').localeCompare(b.pref||'');
+    if(sortKey==='alliance') return (a.alliance||'').localeCompare(b.alliance||'');
+    return (a.name||'').localeCompare(b.name||'');
+  });
+}
+
+/* ── STATS ── */
+function renderStats(){
+  const scheduled = scheduleData.map(s=>s.id);
+  const waiting = waitlistData.map(w=>w.id);
+  const total = players.length;
+  const sched = players.filter(p=>scheduled.includes(p.id)).length;
+  const wl = waiting.length;
+  const conflicts = getConflicts().size;
+  document.getElementById('statsRow').innerHTML=`
+    <div class="stat-card"><div class="stat-val">${total}</div><div class="stat-label">Total Players</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--green)">${sched}</div><div class="stat-label">Scheduled</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--orange)">${wl}</div><div class="stat-label">Wait List</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--red)">${conflicts}</div><div class="stat-label">Conflicts</div></div>
+  `;
+}
+
+function getConflicts(){
+  const timeMap={};
+  players.forEach(p=>{ if(p.pref){ if(!timeMap[p.pref]) timeMap[p.pref]=[]; timeMap[p.pref].push(p.id); }});
+  const conflicted=new Set();
+  Object.values(timeMap).forEach(ids=>{ if(ids.length>1) ids.forEach(id=>conflicted.add(id)); });
+  return conflicted;
+}
+
+/* ── RENDER TABLE ── */
+function renderTable(){
+  renderStats();
+  const sorted=getSorted();
+  const conflicts=getConflicts();
+  const scheduled=new Set(scheduleData.map(s=>s.id));
+  const waitlisted=new Set(waitlistData.map(w=>w.id));
+  const body=document.getElementById('playerBody');
+  if(!sorted.length){
+    body.innerHTML=`<tr><td colspan="10"><div class="empty-state"><div class="empty-state-icon">👑</div><div class="empty-state-title">No players yet</div><div class="empty-state-desc">Click "+ Add Player" to add your first appointment request.</div></div></td></tr>`;
+    return;
+  }
+  body.innerHTML=sorted.map(p=>{
+    const s=score(p);
+    const isConflict=conflicts.has(p.id);
+    const isSched=scheduled.has(p.id);
+    const isWait=waitlisted.has(p.id);
+    let badge='';
+    if(isSched) badge=`<span class="assigned-badge">✓ Assigned</span>`;
+    else if(isWait) badge=`<span class="waitlist-badge">⏳ Wait List</span>`;
+    else if(isConflict) badge=`<span class="conflict-badge">⚠ Conflict</span>`;
+    return `<tr>
+      <td class="td-name">${esc(p.name)}</td>
+      <td class="td-alliance">${esc(p.alliance)}</td>
+      <td class="td-mono">${p.tg||'—'}</td>
+      <td class="td-mono">${p.ttg||'—'}</td>
+      <td class="td-score">${s.toLocaleString()}</td>
+      <td class="td-time">${fmtTime(p.pref)}</td>
+      <td class="td-time" style="color:var(--text3)">${fmtTime(p.sec)}</td>
+      <td>${badge}</td>
+      <td style="color:var(--text3);font-size:12px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(p.notes||'')}">${p.notes?esc(p.notes):'—'}</td>
+      <td><div class="td-actions">
+        <button class="btn btn-secondary btn-sm btn-icon" onclick="editPlayer('${p.id}')" title="Edit">✏️</button>
+        <button class="btn btn-danger btn-sm btn-icon" onclick="deletePlayer('${p.id}')" title="Delete">🗑</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* ── MODAL ── */
+function openModal(id=null){
+  editId=id;
+  const p=id?players.find(x=>x.id===id):null;
+  document.getElementById('modalTitle').textContent=id?'Edit Player':'Add Player';
+  document.getElementById('f-name').value=p?.name||'';
+  document.getElementById('f-alliance').value=p?.alliance||'';
+  document.getElementById('f-tg').value=p?.tg||'';
+  document.getElementById('f-ttg').value=p?.ttg||'';
+  document.getElementById('f-pref').value=p?.pref||'';
+  document.getElementById('f-sec').value=p?.sec||'';
+  document.getElementById('f-notes').value=p?.notes||'';
+  document.getElementById('modalOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('f-name').focus(),100);
+}
+function closeModal(){ document.getElementById('modalOverlay').classList.remove('open'); editId=null; }
+function closeModalOnBg(e){ if(e.target===document.getElementById('modalOverlay')) closeModal(); }
+
+function savePlayer(){
+  const name=document.getElementById('f-name').value.trim();
+  const alliance=document.getElementById('f-alliance').value.trim();
+  const tg=document.getElementById('f-tg').value.trim();
+  const ttg=document.getElementById('f-ttg').value.trim();
+  const pref=document.getElementById('f-pref').value;
+  const sec=document.getElementById('f-sec').value;
+  const notes=document.getElementById('f-notes').value.trim();
+  if(!name||!alliance||!tg||!ttg||!pref){ showToast('Please fill in all required fields.','error'); return; }
+  if(editId){
+    const idx=players.findIndex(p=>p.id===editId);
+    if(idx>-1) players[idx]={...players[idx],name,alliance,tg:parseInt(tg),ttg:parseInt(ttg),pref,sec,notes};
+    showToast('Player updated.');
+  } else {
+    players.push({id:uid(),name,alliance,tg:parseInt(tg),ttg:parseInt(ttg),pref,sec,notes});
+    showToast('Player added.');
+  }
+  save(); closeModal(); renderTable();
+}
+
+function editPlayer(id){ openModal(id); }
+function deletePlayer(id){
+  if(!confirm('Remove this player?')) return;
+  players=players.filter(p=>p.id!==id);
+  scheduleData=scheduleData.filter(s=>s.id!==id);
+  waitlistData=waitlistData.filter(w=>w.id!==id);
+  save(); renderTable(); showToast('Player removed.','error');
+}
+
+/* ── SCHEDULE LOGIC ── */
+function timeToMins(t){ if(!t) return -1; const [h,m]=t.split(':').map(Number); return h*60+m; }
+function minsToTime(m){ const h=Math.floor(m/60)%24; const mn=m%60; return `${String(h).padStart(2,'0')}:${String(mn).padStart(2,'0')}`; }
+
+function generateSchedule(){
+  if(!players.length){ showToast('No players to schedule.','error'); return; }
+
+  // Build all unique 30-min slots across requested times
+  const allTimes=new Set();
+  players.forEach(p=>{ if(p.pref) allTimes.add(p.pref.slice(0,5)); if(p.sec) allTimes.add(p.sec.slice(0,5)); });
+  const slots=[...allTimes].map(t=>t.slice(0,5)).sort();
+
+  const slotMap={}; // slot -> assigned player id
+  const assigned=new Set();
+  scheduleData=[];
+  waitlistData=[];
+
+  // Sort players by priority score desc
+  const byScore=[...players].sort((a,b)=>score(b)-score(a));
+
+  // Pass 1: assign preferred times
+  byScore.forEach(p=>{
+    const t=p.pref?.slice(0,5);
+    if(!t) return;
+    if(!slotMap[t]){
+      slotMap[t]=p.id;
+      assigned.add(p.id);
+      scheduleData.push({...p, assignedTime:t});
+    }
+  });
+
+  // Pass 2: try secondary for unassigned
+  byScore.forEach(p=>{
+    if(assigned.has(p.id)) return;
+    const t=p.sec?.slice(0,5);
+    if(!t) return;
+    if(!slotMap[t]){
+      slotMap[t]=p.id;
+      assigned.add(p.id);
+      scheduleData.push({...p, assignedTime:t});
+    }
+  });
+
+  // Pass 3: try nearest free slot
+  const allMins=[...allTimes].map(t=>timeToMins(t)).sort((a,b)=>a-b);
+  byScore.forEach(p=>{
+    if(assigned.has(p.id)) return;
+    const prefM=timeToMins(p.pref?.slice(0,5));
+    let nearest=null, nearestDist=Infinity;
+    // search in 30min increments from 00:00 to 23:30
+    for(let m=0;m<24*60;m+=30){
+      const t=minsToTime(m);
+      if(!slotMap[t]){
+        const dist=Math.abs(m-prefM);
+        if(dist<nearestDist){ nearestDist=dist; nearest=t; }
+      }
+    }
+    if(nearest){
+      slotMap[nearest]=p.id;
+      assigned.add(p.id);
+      scheduleData.push({...p, assignedTime:nearest, movedFromPref:true});
+    }
+  });
+
+  // Remaining go to waitlist
+  byScore.forEach(p=>{
+    if(!assigned.has(p.id)) waitlistData.push(p);
+  });
+
+  // Sort schedule by time
+  scheduleData.sort((a,b)=>a.assignedTime.localeCompare(b.assignedTime));
+
+  renderSchedule();
+  renderWaitlist();
+  renderTable();
+  showToast(`Schedule generated — ${scheduleData.length} assigned, ${waitlistData.length} on wait list.`);
+}
+
+function renderSchedule(){
+  const el=document.getElementById('scheduleOutput');
+  if(!scheduleData.length){ el.innerHTML=`<div class="empty-state"><div class="empty-state-icon">📅</div><div class="empty-state-title">No schedule generated yet</div><div class="empty-state-desc">Click "Generate Schedule" to auto-assign all slots.</div></div>`; return; }
+  el.innerHTML=`
+    <div class="schedule-wrap">
+      <table class="schedule-table">
+        <thead><tr><th>#</th><th>Time (UTC)</th><th>Player</th><th>Alliance</th><th>TG</th><th>TTG</th><th>Score</th><th>Notes</th></tr></thead>
+        <tbody>${scheduleData.map((p,i)=>`
+          <tr class="${p.movedFromPref?'':'sched-row-king'}">
+            <td style="color:var(--text3);font-family:'JetBrains Mono',monospace;font-size:12px;">${i+1}</td>
+            <td class="sched-time">${fmtTime(p.assignedTime)}</td>
+            <td class="sched-name">${esc(p.name)}${p.movedFromPref?` <span style="font-size:10px;color:var(--orange)">↻ moved</span>`:''}</td>
+            <td class="sched-alliance">${esc(p.alliance)}</td>
+            <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--gold)">${p.tg}</td>
+            <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--gold)">${p.ttg}</td>
+            <td class="sched-score">${score(p).toLocaleString()}</td>
+            <td style="color:var(--text3);font-size:12px;">${p.notes?esc(p.notes):'—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderWaitlist(){
+  const el=document.getElementById('waitlistOutput');
+  if(!waitlistData.length){ el.innerHTML=`<div class="empty-state"><div class="empty-state-icon">✅</div><div class="empty-state-title">Wait list is empty</div><div class="empty-state-desc">All players were successfully assigned a slot.</div></div>`; return; }
+  el.innerHTML=`
+    <div class="waitlist-wrap">
+      <div class="wl-header"><span>⏳</span><span class="wl-title">Wait List — ${waitlistData.length} player${waitlistData.length!==1?'s':''}</span></div>
+      <table class="wl-table">
+        <thead><tr><th>Priority</th><th>Player</th><th>Alliance</th><th>TG</th><th>TTG</th><th>Score</th><th>Requested Time</th></tr></thead>
+        <tbody>${waitlistData.map((p,i)=>`
+          <tr>
+            <td class="wl-rank">#${i+1}</td>
+            <td style="font-weight:600">${esc(p.name)}</td>
+            <td style="color:var(--purple);font-size:12px">${esc(p.alliance)}</td>
+            <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--gold)">${p.tg}</td>
+            <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--gold)">${p.ttg}</td>
+            <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--green);font-weight:700">${score(p).toLocaleString()}</td>
+            <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--blue)">${fmtTime(p.pref)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+/* ── EXPORT ── */
+function exportCSV(){
+  if(!scheduleData.length){ showToast('Generate a schedule first.','error'); return; }
+  const header=['#','Time (UTC)','Player','Alliance','TG','TTG','Priority Score','Notes'];
+  const rows=scheduleData.map((p,i)=>[i+1,fmtTime(p.assignedTime),p.name,p.alliance,p.tg,p.ttg,score(p),p.notes||'']);
+  const csv=[header,...rows].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='KAM_Schedule.csv'; a.click();
+  showToast('CSV exported.');
+}
+
+function exportExcel(){
+  if(!scheduleData.length){ showToast('Generate a schedule first.','error'); return; }
+  const wb=XLSX.utils.book_new();
+
+  // Schedule sheet
+  const schedRows=[
+    ['👑 KING APPOINTMENT SCHEDULE','','','','','','',''],
+    ['Generated: '+new Date().toUTCString(),'','','','','','',''],
+    [''],
+    ['#','Time (UTC)','Player','Alliance','TG','TTG','Priority Score','Notes'],
+    ...scheduleData.map((p,i)=>[i+1,fmtTime(p.assignedTime),p.name,p.alliance,p.tg,p.ttg,score(p),p.notes||''])
+  ];
+  const ws=XLSX.utils.aoa_to_sheet(schedRows);
+  ws['!cols']=[{wch:4},{wch:14},{wch:22},{wch:12},{wch:10},{wch:10},{wch:14},{wch:30}];
+  XLSX.utils.book_append_sheet(wb,ws,'Schedule');
+
+  // Waitlist sheet
+  if(waitlistData.length){
+    const wlRows=[
+      ['⏳ WAIT LIST','','','','',''],
+      ['#','Player','Alliance','TG','TTG','Priority Score','Requested Time'],
+      ...waitlistData.map((p,i)=>[i+1,p.name,p.alliance,p.tg,p.ttg,score(p),fmtTime(p.pref)])
+    ];
+    const ws2=XLSX.utils.aoa_to_sheet(wlRows);
+    ws2['!cols']=[{wch:4},{wch:22},{wch:12},{wch:10},{wch:10},{wch:14},{wch:14}];
+    XLSX.utils.book_append_sheet(wb,ws2,'Wait List');
+  }
+
+  XLSX.writeFile(wb,'KAM_Schedule.xlsx');
+  showToast('Excel file exported.');
+}
+
+/* ── KEYBOARD SHORTCUT ── */
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape') closeModal();
+  if(e.key==='Enter'&&document.getElementById('modalOverlay').classList.contains('open')){
+    const active=document.activeElement;
+    if(active&&active.tagName!=='TEXTAREA') savePlayer();
+  }
+});
+
+/* ── INIT ── */
+renderTable();
+renderStats();
+</script>
+</body>
+</html>
